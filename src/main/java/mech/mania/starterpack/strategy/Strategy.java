@@ -1,66 +1,69 @@
-package mech.mania.starterpack.strategy;
+import mech.mania.starterpack.game.BaseStrategy;
+import mech.mania.starterpack.game.Plane;
+import mech.mania.starterpack.game.PlaneType;
 
-import mech.mania.starterpack.game.GameState;
-import mech.mania.starterpack.game.character.MoveAction;
-import mech.mania.starterpack.game.character.action.AbilityAction;
-import mech.mania.starterpack.game.character.action.AttackAction;
-import mech.mania.starterpack.game.character.action.CharacterClassType;
-
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
-/**
- * Abstract class representing a strategy for bot decision-making. YOU SHOULD NOT EDIT THIS!
- */
-public abstract class Strategy {
+// The following is the heart of your bot. This controls what your bot does.
+// Feel free to change the behavior to your heart's content.
+// You can also add other files under the strategy/ folder and import them
 
-    /**
-     * Decide the character classes your humans will use (only called on humans' first turn).
-     *
-     * @param possibleClasses     A list of the possible classes you can select from.
-     * @param numToPick           The total number of classes you are allowed to select.
-     * @param maxPerSameClass     The max number of characters you can have in the same class.
-     * @return                    A dictionary of class type to the number you want to use of that class.
-     */
-    public abstract Map<CharacterClassType, Integer> decideCharacterClasses(
-            List<CharacterClassType> possibleClasses,
-            int numToPick,
-            int maxPerSameClass
-    );
+public class Strategy extends BaseStrategy {
+    // BaseStrategy provides `this.team`, so you use `this.team` to see what team you are on
 
-    /**
-     * Decide the moves for each character based on the current game state.
-     *
-     * @param possibleMoves  Maps character id to its possible moves. You can use this to validate if a move is possible, or pick from this list.
-     * @param gameState      The current state of all characters and terrain on the map.
-     * @return               A list of MoveAction objects representing the chosen moves.
-     */
-    public abstract List<MoveAction> decideMoves(
-            Map<String, List<MoveAction>> possibleMoves,
-            GameState gameState
-    );
+    // You can define whatever variables you want here
+    private int myCounter = 0;
+    private Map<String, Double> mySteers = new HashMap<>();
+    private Random random = new Random();
 
-    /**
-     * Decide the attacks for each character based on the current game state.
-     *
-     * @param possibleAttacks  Maps character id to its possible attacks. You can use this to validate if an attack is possible, or pick from this list.
-     * @param gameState        The current state of all characters and terrain on the map.
-     * @return                 A list of AttackAction objects representing the chosen attacks.
-     */
-    public abstract List<AttackAction> decideAttacks(
-            Map<String, List<AttackAction>> possibleAttacks,
-            GameState gameState
-    );
+    public Strategy(String team) {
+        super(team);
+    }
 
-    /**
-     * Decide the abilities for each character based on the current game state.
-     *
-     * @param possibleAbilities  Maps character id to its possible abilities. You can use this to validate if an ability is possible, or pick from this list.
-     * @param gameState          The current state of all characters and terrain on the map.
-     * @return                   A list of AbilityAction objects representing the chosen abilities.
-     */
-    public abstract List<AbilityAction> decideAbilities(
-            Map<String, List<AbilityAction>> possibleAbilities,
-            GameState gameState
-    );
+    @Override
+    public Map<PlaneType, Integer> selectPlanes() {
+        // Select which planes you want, and what number
+        Map<PlaneType, Integer> planeSelection = new HashMap<>();
+        planeSelection.put(PlaneType.BASIC, random.nextInt(6) + 5); // random between 5 and 10
+        return planeSelection;
+    }
+
+    @Override
+    public Map<String, Integer> steerInput(Map<String, Plane> planes) {
+        // Define a map to hold our response
+        Map<String, Integer> response = new HashMap<>();
+
+        // For each plane
+        for (Map.Entry<String, Plane> entry : planes.entrySet()) {
+            String id = entry.getKey();
+            Plane plane = entry.getValue();
+
+            // We can only control our own planes
+            if (!plane.getTeam().equals(this.team)) {
+                // Ignore any planes that aren't our own - continue
+                continue;
+            }
+
+            // If we're within the first 5 turns, just set the steer to 0
+            if (myCounter < 5) {
+                response.put(id, 0);
+            } else {
+                // If we haven't initialized steers yet, generate a random one for this plane
+                if (!mySteers.containsKey(id)) {
+                    mySteers.put(id, random.nextDouble() * 2 - 1); // random value between -1 and 1
+                }
+
+                // Set the steer for this plane to our previously decided steer
+                response.put(id, mySteers.get(id).intValue());
+            }
+        }
+
+        // Increment counter to keep track of what turn we're on
+        myCounter++;
+
+        // Return the steers
+        return response;
+    }
 }

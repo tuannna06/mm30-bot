@@ -1,4 +1,4 @@
-.idea
+../java-starterpack-old/.idea
 # Ignore Gradle project-specific cache directory
 .gradle
 
@@ -10,3 +10,4 @@ debuglog/
 engine/
 gamelogs/
 logs/
+engine/

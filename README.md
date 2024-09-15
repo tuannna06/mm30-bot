@@ -17,16 +17,28 @@ visualize the game's progress and end result.
 
 ## Installation
 
-To start, make sure you have Java 17+ installed. You can check by running:
+We recommend using IntelliJ as you can get a free license with your @illinois.edu email. However, you are free to use any editor.
+
+To start, make sure you have [**Oracle OpenJDK 22**](https://jdk.java.net/22/) installed. Other versions WILL NOT work. You can check by running:
 
 ```sh
 java --version
 ```
 
-You'll also need Python 3.9+, which you can check by running:
+You should see:
+```txt
+openjdk 22.0.2 2024-07-16
+```
+
+You'll also need Python 3.11+, which you can check by running:
 
 ```sh
 python --version
+```
+
+You should see:
+```txt
+Python 3.11.1
 ```
 
 To install the engine, run:
