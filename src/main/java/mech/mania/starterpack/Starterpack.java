@@ -1,24 +1,19 @@
 package mech.mania.starterpack;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import mech.mania.starterpack.game.GameState;
-import mech.mania.starterpack.game.character.MoveAction;
-import mech.mania.starterpack.game.character.action.AbilityAction;
-import mech.mania.starterpack.game.character.action.AttackAction;
-import mech.mania.starterpack.game.character.action.CharacterClassType;
+import mech.mania.starterpack.game.Plane;
+import mech.mania.starterpack.game.PlaneStats;
+import mech.mania.starterpack.game.PlaneType;
 import mech.mania.starterpack.network.Client;
 import mech.mania.starterpack.network.Phase;
 import mech.mania.starterpack.network.ReceivedMessage;
 import mech.mania.starterpack.strategy.Strategy;
 
 import java.io.*;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.*;
-
-import static mech.mania.starterpack.strategy.ChooseStrategy.chooseStrategy;
 
 public class Starterpack {
     private static final String rawDebugEnv = System.getenv("DEBUG");
@@ -39,24 +34,6 @@ public class Starterpack {
 
             Port is the port to serve on""";
 
-    private static final Map<RunOpponent, List<PrefixCommandPair>> COMMANDS_FOR_OPPONENT = Map.of(
-            RunOpponent.SELF, List.of(
-                    new PrefixCommandPair("Engine", "npm start 3000 3001"),
-                    new PrefixCommandPair("Team 0", "java -jar build/libs/starterpack.jar serve 3000"),
-                    new PrefixCommandPair("Team 1", "java -jar build/libs/starterpack.jar serve 3001")
-            ),
-            RunOpponent.COMPUTER_TEAM_0, List.of(
-                    new PrefixCommandPair("Engine", "npm start 0 9001"),
-                    new PrefixCommandPair("Team 1", "java -jar build/libs/starterpack.jar serve 9001")
-            ),
-            RunOpponent.COMPUTER_TEAM_1, List.of(
-                    new PrefixCommandPair("Engine", "npm start engine/engine.jar 9001 0"),
-                    new PrefixCommandPair("Team 0", "java -jar build/libs/starterpack.jar serve 9001")
-            )
-    );
-
-    private record PrefixCommandPair(String prefix, String command) {}
-
     private enum RunOpponent {
         SELF("self"),
         COMPUTER_TEAM_0("computerTeam0"),
@@ -70,19 +47,6 @@ public class Starterpack {
 
         public String getValue() {
             return value;
-        }
-    }
-
-    private record RunAndOutputArgs(boolean isErr, long timeNs, int index, String line) {}
-
-    private static void runAndOutput(InputStream io, int i, boolean isErr, List<RunAndOutputArgs> output) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(io))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.add(new RunAndOutputArgs(isErr, System.nanoTime(), i, line.trim()));
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
@@ -106,7 +70,7 @@ public class Starterpack {
 
         ObjectMapper objectMapper = new ObjectMapper();
 
-        Strategy strategy;
+        Strategy strategy = null;
 
         while (true) {
             String rawReceived = client.read();
@@ -115,90 +79,57 @@ public class Starterpack {
                 try {
                     ReceivedMessage receivedMessage = objectMapper.readValue(rawReceived, ReceivedMessage.class);
                     Phase phase = receivedMessage.phase();
-                    ObjectNode data = receivedMessage.data();
+                    JsonNode data = receivedMessage.data();
 
                     if (phase != Phase.FINISH) {
                         if (DEBUG) {
-                            System.out.printf("[TURN %d]: Getting your bot's response to %s phase...\n", turn, phase);
+                            System.out.printf("Getting your bot's response to %s phase...\n", phase);
                         }
                     }
 
                     if (phase == Phase.HELLO_WORLD) {
-                        // todo
-                        List<CharacterClassType> possibleClasses = objectMapper.readValue(
-                                objectMapper.treeAsTokens(message.get("choices")),
+                        String team = String.valueOf(data.get("team"));
+                        Map<PlaneType, PlaneStats> planeTypePlaneToStats = objectMapper.readValue(
+                                objectMapper.treeAsTokens(data.get("stats")),
                                 new TypeReference<>() {}
                         );
-                        int numToPick = message.get("numToPick").asInt();
-                        int maxPerSameClass = message.get("maxPerSameClass").asInt();
+                        PlaneStats.setPlaneTypeToStats(planeTypePlaneToStats);
 
-                        Map<CharacterClassType, Integer> output = strategy.decideCharacterClasses(possibleClasses, numToPick, maxPerSameClass);
+                        strategy = new Strategy(team);
+
+                        String response = "{\"good\": true}";
+                        client.write(response);
+                    } else if (phase == Phase.PLANE_SELECT) {
+                        Map<PlaneType, Integer> output = strategy.selectPlanes();
 
                         if (output == null) {
-                            throw new RuntimeException("Your decideCharacterClasses strategy returned nothing (null)!");
+                            throw new RuntimeException("Your selectPlanes strategy returned nothing (null)!");
                         }
 
                         String response = objectMapper.writeValueAsString(output);
-
-                        strategy = new Strategy();
-
                         client.write(response);
-                    } else if (phase.equals("MOVE")) {
-                        // todo
-                        Map<String, List<MoveAction>> possibleMoves = objectMapper.readValue(
-                                objectMapper.treeAsTokens(message.get("possibleMoves")),
+                    } else if (phase == Phase.STEER_INPUT) {
+                        Map<String, Plane> planes = objectMapper.readValue(
+                                objectMapper.treeAsTokens(data),
                                 new TypeReference<>() {}
                         );
 
-                        List<MoveAction> output = strategy.decideMoves(possibleMoves, gameState);
-
+                        Map<String, Double> output = strategy.steerInput(planes);
                         if (output == null) {
-                            throw new RuntimeException("Your decideMoves strategy returned nothing (null)!");
+                            throw new RuntimeException("Your steerInput strategy returned nothing (null)!");
                         }
 
                         String response = objectMapper.writeValueAsString(output);
-
                         client.write(response);
-                    } else if ("ATTACK".equals(phase)) {
-                        // todo
-                        Map<String, List<AttackAction>> possibleAttacks = objectMapper.readValue(
-                                objectMapper.treeAsTokens(message.get("possibleAttacks")),
-                                new TypeReference<>() {}
-                        );
-                        List<AttackAction> output = strategy.decideAttacks(possibleAttacks, gameState);
-
-                        if (output == null) {
-                            throw new RuntimeException("Your decideAttacks strategy returned nothing (null)!");
-                        }
-
-                        String response = objectMapper.writeValueAsString(output);
-
-                        client.write(response);
-                    } else if (phase.equals("ABILITY")) {
-                        // todo
-                        Map<String, List<AbilityAction>> possibleAbilities = objectMapper.readValue(
-                                objectMapper.treeAsTokens(message.get("possibleAbilities")),
-                                new TypeReference<>() {}
-                        );
-
-                        List<AbilityAction> output = strategy.decideAbilities(possibleAbilities, gameState);
-
-                        if (output == null) {
-                            throw new RuntimeException("Your decideAbilities strategy returned nothing (null)!");
-                        }
-
-                        String response = objectMapper.writeValueAsString(output);
-
-                        client.write(response);
-                    } else if ("FINISH".equals(phase)) {
-                        // todo
+                    }else if (phase == Phase.FINISH) {
+                        System.out.println(data.asText());
                         break;
                     } else {
                         throw new RuntimeException("Unknown phase type " + phase);
                     }
 
                     if (DEBUG) {
-                        System.out.printf("[TURN %d]: Sent response to %s phase to server!\n", turn, phase);
+                        System.out.printf("Sent response to %s phase to server!\n", phase);
                     }
                 } catch (Exception e) {
                     System.err.println("Something went wrong running your bot: " + e.getMessage());
@@ -267,39 +198,5 @@ public class Starterpack {
             System.err.println(MAIN_USAGE);
             System.exit(1);
         }
-
-//        Option portOption = Option.builder()
-//                .longOpt("port")
-//                .desc("Port for the 'serve' command")
-//                .hasArg()
-//                .argName("port")
-//                .type(Integer.class)
-//                .build();
-//
-//        options.addOption(commandOption);
-//        options.addOption(opponentOption);
-//        options.addOption(portOption);
-//
-//        CommandLineParser parser = new DefaultParser();
-//
-//        try {
-//            CommandLine cmd = parser.parse(options, args);
-//
-//            String command = cmd.getOptionValue("command");
-//
-//            if (command.equals("run")) {
-//                String opponent = cmd.getOptionValue("opponent");
-//                run(RunOpponent.valueOf(opponent.toUpperCase()));
-//            } else if (command.equals("serve")) {
-//                int port = Integer.parseInt(cmd.getOptionValue("port"));
-//                serve(port);
-//            } else {
-//                System.err.println("Unknown command: " + command);
-//                printHelp(options);
-//            }
-//        } catch (ParseException e) {
-//            System.err.println("Error parsing command-line arguments: " + e.getMessage());
-//            printHelp(options);
-//        }
     }
 }

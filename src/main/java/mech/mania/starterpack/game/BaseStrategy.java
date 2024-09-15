@@ -22,5 +22,5 @@ public abstract class BaseStrategy {
      * Return a map mapping each plane id to the amount they will steer [-1, 1],
      * where positive is clockwise
      */
-    public abstract Map<String, Integer> steerInput(Map<String, Plane> planes);
+    public abstract Map<String, Double> steerInput(Map<String, Plane> planes);
 }

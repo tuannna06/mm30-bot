@@ -44,10 +44,44 @@ COMMANDS_FOR_OPPONENT: dict[RunOpponent, list[tuple[str, str]]] = {
     ],
 }
 
+def build_jar():
+    one_worked = False
+    gradle_outputs = []
+
+    possible_gradles = ["./gradlew build", "cmd /c \"gradlew.bat build\""]
+    for possible_gradle in possible_gradles:
+        try:
+            process = subprocess.Popen(
+                possible_gradle,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            output, _ = process.communicate()
+            exit_code = process.wait()
+
+            gradle_outputs.append(f"{possible_gradle} exited with exit code {exit_code}")
+            gradle_outputs.extend(output.splitlines())
+
+            if exit_code == 0:
+                one_worked = True
+                break
+        except Exception as e:
+            gradle_outputs.append(str(e))
+
+    if not one_worked:
+        print("Failed to build jar:", file=sys.stderr)
+        for output in gradle_outputs:
+            print(output, file=sys.stderr)
+        sys.exit(1)
+
 
 def run(opponent: RunOpponent):
     if engine:
         engine.update_if_not_latest()
+
+    print("Building jar...")
+    build_jar()
 
     print(
         f"Running against opponent {opponent.value}... (might take a minute, please wait)"

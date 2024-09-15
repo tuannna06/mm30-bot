@@ -1,3 +1,5 @@
+package mech.mania.starterpack.strategy;
+
 import mech.mania.starterpack.game.BaseStrategy;
 import mech.mania.starterpack.game.Plane;
 import mech.mania.starterpack.game.PlaneType;
@@ -15,8 +17,8 @@ public class Strategy extends BaseStrategy {
 
     // You can define whatever variables you want here
     private int myCounter = 0;
-    private Map<String, Double> mySteers = new HashMap<>();
-    private Random random = new Random();
+    private final Map<String, Double> mySteers = new HashMap<>();
+    private final Random random = new Random();
 
     public Strategy(String team) {
         super(team);
@@ -31,9 +33,9 @@ public class Strategy extends BaseStrategy {
     }
 
     @Override
-    public Map<String, Integer> steerInput(Map<String, Plane> planes) {
+    public Map<String, Double> steerInput(Map<String, Plane> planes) {
         // Define a map to hold our response
-        Map<String, Integer> response = new HashMap<>();
+        Map<String, Double> response = new HashMap<>();
 
         // For each plane
         for (Map.Entry<String, Plane> entry : planes.entrySet()) {
@@ -48,7 +50,7 @@ public class Strategy extends BaseStrategy {
 
             // If we're within the first 5 turns, just set the steer to 0
             if (myCounter < 5) {
-                response.put(id, 0);
+                response.put(id, 0.);
             } else {
                 // If we haven't initialized steers yet, generate a random one for this plane
                 if (!mySteers.containsKey(id)) {
@@ -56,7 +58,7 @@ public class Strategy extends BaseStrategy {
                 }
 
                 // Set the steer for this plane to our previously decided steer
-                response.put(id, mySteers.get(id).intValue());
+                response.put(id, mySteers.get(id));
             }
         }
 

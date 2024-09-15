@@ -1,10 +1,12 @@
 package mech.mania.starterpack.game;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Map;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PlaneStats {
     private static Map<PlaneType, PlaneStats> PLANE_TYPE_TO_STATS;
     private final double speed;
