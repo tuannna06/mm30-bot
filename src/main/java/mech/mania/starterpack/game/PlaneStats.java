@@ -8,7 +8,6 @@ import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PlaneStats {
-    private static Map<PlaneType, PlaneStats> PLANE_TYPE_TO_STATS;
     private final double speed;
     private final double turnSpeed;
     private final int maxHealth;
@@ -29,10 +28,6 @@ public class PlaneStats {
         this.attackRange = attackRange;
     }
 
-    public static PlaneStats getByType(PlaneType type) {
-        return PlaneStats.PLANE_TYPE_TO_STATS.get(type);
-    }
-
     public double getSpeed() {
         return speed;
     }
@@ -51,9 +46,5 @@ public class PlaneStats {
 
     public double getAttackRange() {
         return attackRange;
-    }
-
-    public static void setPlaneTypeToStats(Map<PlaneType, PlaneStats> planeTypeToStats) {
-        PlaneStats.PLANE_TYPE_TO_STATS = planeTypeToStats;
     }
 }

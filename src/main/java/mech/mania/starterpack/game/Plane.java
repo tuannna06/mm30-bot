@@ -22,14 +22,15 @@ public class Plane {
             @JsonProperty("type") PlaneType type,
             @JsonProperty("position") Position position,
             @JsonProperty("angle") double angle,
-            @JsonProperty("health") int health) {
+            @JsonProperty("health") int health,
+            @JsonProperty("stats") PlaneStats stats) {
         this.id = id;
         this.team = team;
         this.type = type;
         this.position = position;
         this.angle = angle;
         this.health = health;
-        this.stats = PlaneStats.getByType(type);
+        this.stats = stats;
     }
 
     public String getId() {

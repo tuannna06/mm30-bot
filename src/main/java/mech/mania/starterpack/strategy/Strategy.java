@@ -27,8 +27,14 @@ public class Strategy extends BaseStrategy {
     @Override
     public Map<PlaneType, Integer> selectPlanes() {
         // Select which planes you want, and what number
-        Map<PlaneType, Integer> planeSelection = new HashMap<>();
-        planeSelection.put(PlaneType.BASIC, random.nextInt(6) + 5); // random between 5 and 10
+        Map<PlaneType, Integer> planeSelection = Map.of(
+            PlaneType.STANDARD, 1,
+            PlaneType.FLYING_FORTRESS, 1,
+            PlaneType.THUNDERBIRD, 1,
+            PlaneType.SCRAPYARD_RESCUE, 1,
+            PlaneType.PIGEON, 10
+        );
+
         return planeSelection;
     }
 

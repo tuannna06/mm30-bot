@@ -89,11 +89,6 @@ public class Starterpack {
 
                     if (phase == Phase.HELLO_WORLD) {
                         String team = String.valueOf(data.get("team"));
-                        Map<PlaneType, PlaneStats> planeTypePlaneToStats = objectMapper.readValue(
-                                objectMapper.treeAsTokens(data.get("stats")),
-                                new TypeReference<>() {}
-                        );
-                        PlaneStats.setPlaneTypeToStats(planeTypePlaneToStats);
 
                         strategy = new Strategy(team);
 
