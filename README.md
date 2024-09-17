@@ -75,7 +75,7 @@ git version 2.46.0
 
 Finally, in the directory you want your starterpack to be, run:
 ```sh
-git clone https://github.com/MechMania-30/engine.git
+git clone https://github.com/MechMania-30/java-starterpack.git
 ```
 
 ### Editor
