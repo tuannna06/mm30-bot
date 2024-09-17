@@ -12,9 +12,9 @@
 
 # MechMania Java Starterpack
 
-Welcome to MechMania! The java starterpack will allow you to write a java bot to compete against others.
-Two bots will be faced against each other, and then the [engine](https://github.com/MechMania-29/engine) will run a simulation to see who wins!
-After the engine runs you'll get a gamelog (a large json file) that you can use in the [visualizer](https://github.com/MechMania-29/visualizer) to
+Welcome to MechMania! The Java Starterpack will allow you to write a java bot to compete against others.
+Two bots will be faced against each other, and then the [Engine](https://github.com/MechMania-30/engine) will run a simulation to see who wins!
+After the engine runs you'll get a gamelog (a large json file) that you can use in the [Visualizer](https://github.com/MechMania-30/visualizer) to
 visualize the game's progress and end result.
 
 </div>
@@ -23,9 +23,21 @@ visualize the game's progress and end result.
 
 ## Installation
 
-We recommend using IntelliJ as you can get a free license with your @illinois.edu email. However, you are free to use any editor.
+### NPM / Node
 
-To start, make sure you have [**Oracle OpenJDK 22**](https://jdk.java.net/22/) installed. Other versions WILL NOT work. You can check by running:
+First, you'll need [**Node**](https://nodejs.org/en/download/prebuilt-binaries). You can check if you have it installed by running:
+```sh
+npm --version
+```
+
+You should see:
+```txt
+10.8.2
+```
+
+### Java
+
+For the starterpack, you'll need [**Oracle OpenJDK 22**](https://jdk.java.net/22/) Java installed. Other versions WILL NOT work. You can check which version you have installed by running:
 
 ```sh
 java --version
@@ -36,7 +48,9 @@ You should see:
 openjdk 22.0.2 2024-07-16
 ```
 
-You'll also need Python 3.11+, which you can check by running:
+### Python
+
+You'll also need [**Python 3.11+**](https://www.python.org/downloads/), which you can check by running:
 
 ```sh
 python --version
@@ -44,75 +58,90 @@ python --version
 
 You should see:
 ```txt
-Python 3.11.1
+Python 3.12.6
 ```
 
-To install the engine, run:
+### Git
 
+You'll also need [**Git**](https://git-scm.com/downloads), which you can check by running:
 ```sh
-python engine.py
+git --version
 ```
 
-and you should see an engine.jar appear in engine/engine.jar!
+You should see:
+```txt
+git version 2.46.0
+```
 
-If you don't, you can manually install it by following the instructions on the [engine](https://github.com/MechMania-29/engine) page.
+Finally, in the directory you want your starterpack to be, run:
+```sh
+git clone https://github.com/MechMania-30/engine.git
+```
+
+### Editor
+
+Open this in your editor of choice! 
+We recommend using [IntelliJ](https://www.jetbrains.com/idea/) as you can get a free license with your @illinois.edu email, and has generally good support for Java.
+You can also use VSCode, but will need to install a few extensions to get good Java support.
 
 ## Getting started
 
-If you haven't read the [wiki](https://github.com/MechMania-29/Wiki) yet, do that first! This starterpack provides the basics for you to get started. All the files you need to worry about editing are located in the `strategy/` directory. `ChooseStrategy.java` will select the specific strategy to use. You can use this to select different strategies based on whether you're a zombie or not. Each strategy has to implement 4 functions which will determine how your bot responds in each phase. Let's explain them.
-- `public Map<CharacterClassType, Integer> decideCharacterClasses(List<CharacterClassType> possibleClasses, int numToPick, int maxPerSameClass)`
-  - This function will return what classes you'll select when you're the human.
-  - `possibleClasses` gives you the list of possible classes you can choose from, `numToPick` gives the total number you can pick, and `maxPerSameClass` defines the max of how many characters can be in the same class.
-  - You will return a dictionary pairing `CharacterClassType` to the count you want of that.
-  - For example, if you wanted 5 medics, you could simply do:
-  - ```java
+**If you haven't read the [Wiki](https://github.com/MechMania-30/wiki) yet, do that first!**
+This section will explain how to program your bot, but not how the game is played!
+
+This starterpack provides the basics for you to get started.
+All the files you need to worry about editing are located in the `src/main/java/mech/mania/strategy/` directory.
+You can create any files you want to break up your code, but you should keep your changes in this folder only.
+
+We have provided an example (bad) strategy for you in `strategy/Strategy.java`. **Check it out!**
+
+Your Strategy consists of two functions which will determine how your bot responds.
+- `public Map<PlaneType, Integer> selectPlanes()`
+  - This function will return the number of each plane type you would like to spawn in.
+  - You can use `this.team` to determine which team you are, and choose different planes based on which side you spawn on.
+  - You will return a `Map` pairing `PlaneType` to the count you want of that type.
+  - For example, if you wanted 5 pigeons, you could simply do:
+    ```java
     return Map.of(
-      CharacterClassType.MEDIC, 5
+      PlaneType.PIGEON, 5
     )
     ```
-- `public List<MoveAction> decideMoves(Map<String, List<MoveAction>> possibleMoves, GameState gameState)`
-  - This function will return the moves that each character will make.
-  - `possibleMoves` maps each character id to it's possible MoveActions it can take. You can use this to validate if a move is possible, or pick from this list.
-  - `gameState` is the current state of all characters and terrain on the map, you can use this to inform which move you want to make for each character
-  - A MoveAction just defines where the character will end up. You don't have to compute the possible moves manually - we give you the possible ones.
-  - A character id is just a unqiue string that represents a specific character. You can get a character by id with `gameState.characters().get(id)` -> `Character`
-  - You will return a list of moves to take, which should effectively be a move for each character.
-- `public List<AttackAction> decideAttacks(Map<String, List<AttackAction>> possibleAttacks, GameState gameState)`
-  - This function will return the attacks that each character will make.
-  - `possibleAttacks` maps each character id to it's possible AttackActions it can take. You can use this to validate if a move is possible, or pick from this list.
-  - `gameState` is the same as above. Use it to inform your actions.
-  - An AttackAction can be on terrain or a character, so be careful not to just attack everything. See the file it's defined in for more info.
-  - You will return a list of attacks to make, which should be a attack for each character that can attack.
-- `public List<AbilityAction> decideAbilities(Map<String, List<AbilityAction>> possibleAbilities, GameState gameState)`
-  - This function will return the abilities that each character will make.
-  - `possibleAbilities` maps each character id to it's possible AbilityActions it can take.
-  - `gameState` is same as above.
-  - An AbilityAction can be building a barricade or healing. Use type to determine which.
-  - Healing targets a character and building targets a position, so consider that accordingly.
+- `public Map<String, Double> steerInput(Map<String, Plane> planes)`
+  - This function will return the steer that each plane will do for the next turn.
+  - Steers are a value in between -1 and 1, inclusive, with -1 being full left, 0 being straight, and 1 being full right.
+  - Each plane has a unique id which can be accessed by `plane.id`.
+  - You are given a map of every alive plane, keyed by their unique id.
+    Each plane has a bunch of useful properties to strategize with. (hint hint: look at the `Plane` and `PlaneStats` classes in `game/`)
+  - You will return a `Map` pairing each `Plane`'s id to the steer that plane should do.
 
 **Several useful tips:**
 - Read the docs! Reading the wiki is really important as well as the rest of this README. Don't make this harder!
-- All code for MechMania is open source, take advantage of that! For example, [the map can be found on the engine](https://github.com/MechMania-29/engine/blob/main/src/main/resources/maps/main.json).
-- You [only have 2.5 seconds](https://github.com/MechMania-29/engine/blob/main/src/main/java/mech/mania/engine/Config.java#L112) to make a decision for each phase! Don't try anything too complicated. (O^4 = bad)
-- You cannot import any external libraries.
+- All code for MechMania is open source, take advantage of that!
+- You only have 2.5 seconds to make a decision for each phase!
+  Note that this limit is very high, and from our testing you won't reach this unless your code is very inefficient.
+- You cannot import any external libraries. While this may work locally, we cannot guarantee it will work when we battle your bots!
 
 ## Usage
 
-To run your client, you have two options:
+We use gradle to create jars to run your java code. Jars are basically a compiled version of all of your code into a single file.
 
-You can build & then run directly with java, like:
+If you're on windows, you should use `./gradlew.bat`. If you're on any other platform, you should use `./gradlew`.
 
+Building will output a jar to `build/libs/starterpack.jar`:
 ```sh
 ./gradlew build
+```
+or
+```sh
+./gradlew.bat build
+```
+
+Run the output jar:
+```sh
 java -jar build/libs/starterpack.jar [commands here]
 ```
 
-or run with gradle directly:
-```sh
-./gradlew run --args "[commands here]"
-```
-
-We'll show the longer version in these examples but keep in mind you can do both.
+What commands can you run? These:
 
 ### Run your bot against itself
 
@@ -121,18 +150,20 @@ We'll show the longer version in these examples but keep in mind you can do both
 java -jar build/libs/starterpack.jar run self
 ```
 
-### Run your bot against the human computer (your bot plays zombies)
+### Run your bot as Team 0 and the computer will play Team 1
+
+Note: the computer is a very bad bot, but this option is good if you want to test just a single instance of your starterpack at once.
 
 ```sh
 ./gradlew build
-java -jar build/libs/starterpack.jar run humanComputer
+java -jar build/libs/starterpack.jar run computerTeam1
 ```
 
-### Run your bot against the zombie computer (your bot plays humans)
+### Run your bot as Team 1 and the computer will play Team 0
 
 ```sh
 ./gradlew build
-java -jar build/libs/starterpack.jar run zombieComputer
+java -jar build/libs/starterpack.jar run computerTeam0
 ```
 
 ### Serve your bot to a port
@@ -140,6 +171,11 @@ java -jar build/libs/starterpack.jar run zombieComputer
 You shouldn't need to do this, unless none of the other methods work.
 <details>
 <summary>Expand instructions</summary>
+
+**If you have questions, please ask us!**
+We will be in person and available through the [Discord](https://discord.gg/knWWFKTU).
+The setup can be difficult, and every machine is different.
+We want you to have fun!
 
 To serve your bot to a port, you can run it like this:
 
@@ -155,21 +191,39 @@ Where port is the port you want to serve to, like 9001 for example:
 java -jar build/libs/starterpack.jar serve 9001
 ```
 
+To install the engine, run engine.py:
+```
+python engine.py
+```
+You should see a `engine/content/` folder.
+
 A full setup with the engine might look like (all 3 commands in separate terminal windows):
 
 ```sh
 java -jar build/libs/starterpack.jar serve 9001
-java -jar build/libs/starterpack.jar serve 9001
-java -jar engine.jar 9001 9002
+java -jar build/libs/starterpack.jar serve 9002
+npm start 9001 9002
 ```
+
+Note: you must run the commands from within the right directories. The npm (engine) command should be run from inside `engine/content`.
 
 </details>
 
+## Visualizing
+
+When the bots run, you'll see the gamelog be outputed to `logs/log_xxxx/gamelog.json`.
+To visualize what happened during the game, you can use the [Visualizer](https://github.com/MechMania-30/visualizer)!
+
 ## Uploading
+
+To install the MechMania cli, run:
+```sh
+npm i mm30 -g
+```
 
 Using the cli, you can upload your bot using:
 
-```ssh
+```sh
 ./gradlew build
-mm29 upload build/libs/starterpack.jar
+mm30 upload build/libs/starterpack.jar
 ```
