@@ -173,7 +173,7 @@ You shouldn't need to do this, unless none of the other methods work.
 <summary>Expand instructions</summary>
 
 **If you have questions, please ask us!**
-We will be in person and available through the [Discord](https://discord.gg/knWWFKTU).
+We will be in person and available through the [Discord](https://discord.gg/pbyC6TPC33).
 The setup can be difficult, and every machine is different.
 We want you to have fun!
 
