@@ -48,7 +48,7 @@ def build_jar():
     one_worked = False
     gradle_outputs = []
 
-    possible_gradles = ["./gradlew build", "cmd /c \"gradlew.bat build\""]
+    possible_gradles = [["./gradlew", "build"], ["cmd", "/c", "gradlew.bat build"]]
     for possible_gradle in possible_gradles:
         try:
             process = subprocess.Popen(
