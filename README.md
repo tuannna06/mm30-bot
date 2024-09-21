@@ -117,6 +117,7 @@ Your Strategy consists of two functions which will determine how your bot respon
 **Several useful tips:**
 - Read the docs! Reading the wiki is really important as well as the rest of this README. Don't make this harder!
 - All code for MechMania is open source, take advantage of that!
+- We have provided several util functions in `strategy/utils.java`, feel free to use them or change them to your needs!
 - You only have 2.5 seconds to make a decision for each phase!
   Note that this limit is very high, and from our testing you won't reach this unless your code is very inefficient.
 - You cannot import any external libraries. While this may work locally, we cannot guarantee it will work when we battle your bots!
