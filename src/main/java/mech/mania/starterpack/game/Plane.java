@@ -10,7 +10,7 @@ public class Plane {
     private final String id;
     private final String team;
     private final PlaneType type;
-    private final Position position;
+    private final Vector position;
     private final double angle;
     private final int health;
     private final PlaneStats stats;
@@ -20,7 +20,7 @@ public class Plane {
             @JsonProperty("id") String id,
             @JsonProperty("team") String team,
             @JsonProperty("type") PlaneType type,
-            @JsonProperty("position") Position position,
+            @JsonProperty("position") Vector position,
             @JsonProperty("angle") double angle,
             @JsonProperty("health") int health,
             @JsonProperty("stats") PlaneStats stats) {
@@ -45,7 +45,7 @@ public class Plane {
         return type;
     }
 
-    public Position getPosition() {
+    public Vector getPosition() {
         return position;
     }
 

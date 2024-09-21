@@ -1,7 +1,7 @@
 package mech.mania.starterpack.strategy;
 
 import mech.mania.starterpack.game.Plane;
-import mech.mania.starterpack.game.Position;
+import mech.mania.starterpack.game.Vector;
 
 import java.lang.Math;
 
@@ -15,9 +15,9 @@ public class Utils {
      * @param p2
      * @param q1
      * @param q2
-     * @return Position of intersection point, or null if none exists
+     * @return Vector of intersection point, or null if none exists
      */
-    public static Position intersectionPoint(Position p1, Position p2, Position q1, Position q2) {
+    public static Vector intersectionPoint(Vector p1, Vector p2, Vector q1, Vector q2) {
         double slopeP = (p2.y() - p1.y()) / (p2.x() - p1.x());
         double slopeQ = (q2.y() - q1.y()) / (q2.x() - q1.x());
 
@@ -44,7 +44,7 @@ public class Utils {
             y = slopeP * (x - p1.x()) + p1.y();
         }
 
-        return new Position(x, y);
+        return new Vector(x, y);
     }
 
     /**
@@ -53,7 +53,7 @@ public class Utils {
      * @param b
      * @return
      */
-    public static Double angleBetweenPositions(Position a, Position b) {
+    public static Double angleBetweenPositions(Vector a, Vector b) {
         double dotProd = a.dot(b);
         double magnitudeA = a.norm();
         double magnitudeB = b.norm();
@@ -109,14 +109,14 @@ public class Utils {
      * @param initAngle The inital facing of a given plane.
      * @param speed The current speed of a given plane.
      * @param minTurn The smallest turning circle this plane can achieve
-     * @return Position representing the positional OFFSET from the inital position
+     * @return Vector representing the positional OFFSET from the inital position
      */
-    public static Position getPathOffset(double t, double steer, double initAngle, double speed, double minTurn) {
+    public static Vector getPathOffset(double t, double steer, double initAngle, double speed, double minTurn) {
         double radius = steerToRadius(steer, minTurn);
         double initAngleRad = Math.toRadians(initAngle);
 
         if (steer == 0) {
-            return new Position(speed * Math.cos(initAngleRad), speed * Math.sin(initAngleRad));
+            return new Vector(speed * Math.cos(initAngleRad), speed * Math.sin(initAngleRad));
         } else if (steer < 0) {
             initAngleRad += Math.PI / 2;
         } else {
@@ -126,7 +126,7 @@ public class Utils {
         double x = Math.cos(t * (speed / radius) + initAngleRad) - Math.cos(initAngleRad);
         double y = Math.sin(t * (speed / radius) + initAngleRad) - Math.sin(initAngleRad);
 
-        return new Position(x * Math.abs(radius), y * Math.abs(radius));
+        return new Vector(x * Math.abs(radius), y * Math.abs(radius));
     }
 
     /**
@@ -135,11 +135,11 @@ public class Utils {
      * @param t The queried turn. t can be any real number (e.g, t=.05 means after half a turn)
      * @param steer The given steer, which is assumed to be constant.
      * @param plane The queried plane.
-     * @return Position representing the actual position of the plane after t turns.
+     * @return Vector representing the actual position of the plane after t turns.
      */
-    public static Position planePathOffset(double t, double steer, Plane plane) {
+    public static Vector planePathOffset(double t, double steer, Plane plane) {
         double turnRadius = degreeToRadius(plane.getStats().getTurnSpeed(), plane.getStats().getSpeed());
-        Position off = getPathOffset(t, steer, plane.getAngle(), plane.getStats().getSpeed(), turnRadius);
+        Vector off = getPathOffset(t, steer, plane.getAngle(), plane.getStats().getSpeed(), turnRadius);
         return plane.getPosition().add(off);
     }
 
@@ -161,7 +161,7 @@ public class Utils {
      * @return [steer, turns], where (steer) is the steer required for a plane to pass through the given OFFSET point
      * after (turns) turns
      */
-    public static double[] flyToOffset(Position off, double initAngle, double minTurn, double speed) {
+    public static double[] flyToOffset(Vector off, double initAngle, double minTurn, double speed) {
         double x = off.x();
         double y = off.y();
 
@@ -170,14 +170,14 @@ public class Utils {
         }
 
         double rad = Math.toRadians(initAngle);
-        Position headingPerpVec = new Position(Math.cos(rad + Math.PI / 2), Math.sin(rad + Math.PI / 2));
-        Position otherVecStart = new Position(x / 2, y / 2);
-        Position otherVecEnd = new Position(-y + x / 2, x + y / 2);
+        Vector headingPerpVec = new Vector(Math.cos(rad + Math.PI / 2), Math.sin(rad + Math.PI / 2));
+        Vector otherVecStart = new Vector(x / 2, y / 2);
+        Vector otherVecEnd = new Vector(-y + x / 2, x + y / 2);
 
-        Position center = intersectionPoint(new Position(0, 0), headingPerpVec, otherVecStart, otherVecEnd);
+        Vector center = intersectionPoint(new Vector(0, 0), headingPerpVec, otherVecStart, otherVecEnd);
 
         if (center == null) {
-            return new double[] {0, (new Position(x, y)).norm() / speed};
+            return new double[] {0, (new Vector(x, y)).norm() / speed};
         }
 
         double radius = center.norm();
@@ -185,7 +185,7 @@ public class Utils {
             radius = -radius;
         }
 
-        double angle = angleBetweenPositions(new Position(-center.x(), -center.y()), new Position(-center.x() + x, -center.y() + y));
+        double angle = angleBetweenPositions(new Vector(-center.x(), -center.y()), new Vector(-center.x() + x, -center.y() + y));
         return new double[] {radiusToSteer(radius, minTurn), angle * Math.abs(radius) / speed};
     }
 
@@ -199,8 +199,8 @@ public class Utils {
      * @param plane A plane object with stats and a position.
      * @return [steer, turns]: The (steer) required for a plane to pass through a given ABSOLUTE point after (turns) turns
      */
-    public static double[] planeFindPathToPoint(Position target, Plane plane) {
-        Position off = target.add(new Position(-plane.getPosition().x(), -plane.getPosition().y()));
+    public static double[] planeFindPathToPoint(Vector target, Plane plane) {
+        Vector off = target.add(new Vector(-plane.getPosition().x(), -plane.getPosition().y()));
         double turnRadius = degreeToRadius(plane.getStats().getTurnSpeed(), plane.getStats().getSpeed());
         return flyToOffset(off, plane.getAngle(), turnRadius, plane.getStats().getSpeed());
     }
@@ -222,7 +222,7 @@ public class Utils {
      * @return  Returns True if plane in position cannot avoid flying out of bounds.
                 Returns False otherwise.
      */
-    public static boolean unavoidableCrash(Position pos, double angle, double minTurn, double lb, double rb, double db, double ub) {
+    public static boolean unavoidableCrash(Vector pos, double angle, double minTurn, double lb, double rb, double db, double ub) {
         double x = pos.x();
         double y = pos.y();
 
@@ -231,9 +231,9 @@ public class Utils {
         }
 
         double rad = Math.toRadians(angle);
-        Position perpVec = new Position(Math.cos(rad + Math.PI / 2), Math.sin(rad + Math.PI / 2));
-        Position lvec = new Position(x, y).add(new Position(minTurn * perpVec.x(), minTurn * perpVec.y()));
-        Position rvec = new Position(x, y).add(new Position(-minTurn * perpVec.x(), -minTurn * perpVec.y()));
+        Vector perpVec = new Vector(Math.cos(rad + Math.PI / 2), Math.sin(rad + Math.PI / 2));
+        Vector lvec = new Vector(x, y).add(new Vector(minTurn * perpVec.x(), minTurn * perpVec.y()));
+        Vector rvec = new Vector(x, y).add(new Vector(-minTurn * perpVec.x(), -minTurn * perpVec.y()));
 
         boolean lob = lvec.x() + minTurn > rb || lvec.x() - minTurn < lb || lvec.y() + minTurn > ub || lvec.y() - minTurn < db;
         boolean rob = rvec.x() + minTurn > rb || rvec.x() - minTurn < lb || rvec.y() + minTurn > ub || rvec.y() - minTurn < db;
@@ -257,8 +257,8 @@ public class Utils {
      */
     public static boolean steerCrashesPlane(double steer, Plane plane) {
         double turnRadius = degreeToRadius(plane.getStats().getTurnSpeed(), plane.getStats().getSpeed());
-        Position off = getPathOffset(1, steer, plane.getAngle(), plane.getStats().getSpeed(), turnRadius);
-        Position pos = plane.getPosition().add(off);
+        Vector off = getPathOffset(1, steer, plane.getAngle(), plane.getStats().getSpeed(), turnRadius);
+        Vector pos = plane.getPosition().add(off);
         return unavoidableCrash(pos, plane.getAngle() + (plane.getStats().getTurnSpeed() * steer), turnRadius, -50, 50, -50, 50);
     }
 }
