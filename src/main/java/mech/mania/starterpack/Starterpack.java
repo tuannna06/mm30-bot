@@ -50,13 +50,38 @@ public class Starterpack {
         }
     }
 
-    private static void run(RunOpponent opponent) throws IOException, InterruptedException {
+    private static void run(RunOpponent opponent) {
+        String output = "";
+        ProcessBuilder runPython3 = new ProcessBuilder("python3", "run.py", opponent.getValue());
         ProcessBuilder runPython = new ProcessBuilder("python", "run.py", opponent.getValue());
-        runPython.redirectOutput(ProcessBuilder.Redirect.INHERIT);
-        runPython.redirectError(ProcessBuilder.Redirect.INHERIT);
-        Process runPythonProcess = runPython.start();
-        int exit = runPythonProcess.waitFor();
-        System.exit(exit);
+
+        // Try python3 first
+        try {
+            runPython3.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            runPython3.redirectError(ProcessBuilder.Redirect.INHERIT);
+            Process processPython3 = runPython3.start();
+            int exitCodePython3 = processPython3.waitFor();
+
+            System.exit(exitCodePython3);  // python3 succeeded, exit
+        } catch (IOException | InterruptedException e) {
+            output += "Error running python3: " + e.getMessage() + "\n";
+        }
+
+        // If python3 failed, try python
+        try {
+            runPython.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+            runPython.redirectError(ProcessBuilder.Redirect.INHERIT);
+            Process processPython = runPython.start();
+            int exitCodePython = processPython.waitFor();
+
+            System.exit(exitCodePython);  // python succeeded, exit
+        } catch (IOException | InterruptedException e) {
+            output += "Error running python: " + e.getMessage() + "\n";
+        }
+
+        // If both failed, exit with non-zero code
+        System.err.println("Failed to find python or python3:\n" + output);
+        System.exit(1);
     }
 
     private static void serve(int port) throws IOException {
