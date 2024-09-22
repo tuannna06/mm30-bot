@@ -222,6 +222,16 @@ To install the MechMania cli, run:
 npm i mm30 -g
 ```
 
+If you haven't registered with cli (different from the google form), make sure to do:
+```sh
+mm30 register
+```
+
+Then, login with:
+```sh
+mm30 login
+```
+
 Using the cli, you can upload your bot using:
 
 ```sh
