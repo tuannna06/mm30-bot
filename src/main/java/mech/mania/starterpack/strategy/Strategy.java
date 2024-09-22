@@ -26,6 +26,7 @@ public class Strategy extends BaseStrategy {
         strategyMap = new HashMap<>();
         strategyMap.put(PlaneType.STANDARD, this::standardPlaneStrategy);
         strategyMap.put(PlaneType.THUNDERBIRD, this::thunderbirdStrategy);
+        strategyMap.put(PlaneType.PIGEON, this::pigeonStrategy);
 
         priceMap = new HashMap<>();
         priceMap.put(PlaneType.FLYING_FORTRESS, 300);
@@ -37,10 +38,15 @@ public class Strategy extends BaseStrategy {
 
     @Override
     public Map<PlaneType, Integer> selectPlanes() {
+        if (this.team.equals("1")) {
+                return Map.of(
+                    PlaneType.STANDARD, 3,
+                    PlaneType.THUNDERBIRD, 2);
+        }
         return Map.of(
             PlaneType.STANDARD, 3,
-            PlaneType.THUNDERBIRD, 2
-        );
+            PlaneType.THUNDERBIRD, 1,
+            PlaneType.PIGEON, 20);
     }
 
     @Override
@@ -48,7 +54,7 @@ public class Strategy extends BaseStrategy {
         Map<String, Double> response = new HashMap<>();
         List<Plane> opponents = new ArrayList<>();
         List<Plane> teamPlanes = new ArrayList<>();
-    
+
         for (Map.Entry<String, Plane> entry : planes.entrySet()) {
             Plane plane = entry.getValue();
             if (!plane.getTeam().equals(this.team)) {
@@ -57,12 +63,12 @@ public class Strategy extends BaseStrategy {
                 teamPlanes.add(plane);
             }
         }
-    
+
         for (Plane p : teamPlanes) {
             Double steer = getSteerForPlane(p, opponents);
             response.put(p.getId(), steer);
         }
-    
+
         myCounter++;
         return response;
     }
@@ -86,21 +92,26 @@ public class Strategy extends BaseStrategy {
     }
 
     private Double getStrategy(Plane plane, List<Plane> opponents) {
-        return clampSteer(strategyMap.getOrDefault(plane.getType(), (p, o) -> getRandomSteer(plane)).apply(plane, opponents));
+        return clampSteer(
+                strategyMap.getOrDefault(plane.getType(), (p, o) -> getRandomSteer(plane)).apply(plane, opponents));
     }
 
     private Double standardPlaneStrategy(Plane plane, List<Plane> opponents) {
         return run(plane, opponents);
     }
 
+    private Double pigeonStrategy(Plane plane, List<Plane> opponents) {
+        return kamikazeNearest(plane, opponents);
+    }
+
     private Double thunderbirdStrategy(Plane plane, List<Plane> opponents) {
         if (plane.getHealth() <= KAMIKAZE_HEALTH) {
             return clampSteer(validateSteer(plane, kamikaze(plane, opponents)));
         }
-        return clampSteer(validateSteer(plane, 
-               Utils.nvl(pursuit(plane, opponents), 
-               Utils.nvl(kamikaze(plane, opponents), run(plane, opponents)))));
-    }    
+        return clampSteer(validateSteer(plane,
+                Utils.nvl(pursuit(plane, opponents),
+                        Utils.nvl(kamikaze(plane, opponents), run(plane, opponents)))));
+    }
 
     private Double validateSteer(Plane plane, Double steer) {
         return Utils.steerCrashesPlane(steer, plane) ? checkFallbackSteers(plane) : steer;
@@ -109,8 +120,7 @@ public class Strategy extends BaseStrategy {
     private Double pursuit(Plane plane, List<Plane> opponents) {
         List<Plane> validTargets = opponents.stream()
                 .filter(p -> isInFront(plane, p))
-                .filter(p -> betterTrade(plane, p))
-                .sorted(Comparator.comparingDouble(p -> getTradeValue((Plane) p))
+                .sorted(Comparator.comparingInt(Plane::getHealth)
                         .thenComparingDouble(p -> Utils.planeFindPathToPoint(((Plane) p).getPosition(), plane)[1]))
                 .collect(Collectors.toList());
 
@@ -128,8 +138,8 @@ public class Strategy extends BaseStrategy {
     }
 
     private boolean betterTrade(Plane plane, Plane opponent) {
-        return getTradeValue(plane) >= getTradeValue(opponent);
-    } 
+        return getTradeValue(plane) <= getTradeValue(opponent);
+    }
 
     private double getTradeValue(Plane plane) {
         PlaneStats stats = plane.getStats();
@@ -142,8 +152,8 @@ public class Strategy extends BaseStrategy {
         for (int i = 0; i < steps; i++) {
             Vector off = Utils.getPathOffset(1, steer, plane.getAngle(), plane.getStats().getSpeed(), turnRadius);
             pos = pos.add(off);
-            if (Utils.unavoidableCrash(pos, plane.getAngle() + (plane.getStats().getTurnSpeed() * steer), turnRadius, 
-                lb, rb, db, ub)) {
+            if (Utils.unavoidableCrash(pos, plane.getAngle() + (plane.getStats().getTurnSpeed() * steer), turnRadius,
+                    lb, rb, db, ub)) {
                 return false;
             }
         }
@@ -151,8 +161,8 @@ public class Strategy extends BaseStrategy {
     }
 
     private boolean isInFront(Plane plane, Plane target) {
-        Vector planeDirection = new Vector(Math.cos(Math.toRadians(plane.getAngle())), 
-                                           Math.sin(Math.toRadians(plane.getAngle())));
+        Vector planeDirection = new Vector(Math.cos(Math.toRadians(plane.getAngle())),
+                Math.sin(Math.toRadians(plane.getAngle())));
         Vector toTarget = target.getPosition().sub(plane.getPosition());
         double dotProduct = planeDirection.dot(toTarget);
         return dotProduct > 0;
@@ -161,20 +171,41 @@ public class Strategy extends BaseStrategy {
     private Double kamikaze(Plane plane, List<Plane> opponents) {
         List<Plane> validTargets = opponents.stream()
                 .filter(p -> isInFront(plane, p))
-                .sorted(Comparator.comparingInt(Plane::getHealth).reversed()
-                        .thenComparingDouble(p -> Utils.planeFindPathToPoint(p.getPosition(), plane)[1]))
+                .filter(p -> betterTrade(plane, p))
+                .sorted(Comparator.comparingDouble(p -> getTradeValue((Plane) p))
+                        .thenComparingDouble(p -> Utils.planeFindPathToPoint(((Plane) p).getPosition(), plane)[1]))
                 .collect(Collectors.toList());
-    
+
         for (Plane target : validTargets) {
             double[] steerAndSteps = Utils.planeFindPathToPoint(target.getPosition(), plane);
             double steer = clampSteer(steerAndSteps[0]);
             int steps = (int) steerAndSteps[1];
-    
+
             if (validatePath(plane, steer, steps)) {
                 return steer; // Return the valid steer for kamikaze
             }
         }
-    
+
+        return run(plane, opponents); // Fallback if no valid targets
+    }
+
+    private Double kamikazeNearest(Plane plane, List<Plane> opponents) {
+        List<Plane> validTargets = opponents.stream()
+                .filter(p -> isInFront(plane, p))
+                .filter(p -> betterTrade(plane, p))
+                .sorted(Comparator.comparingDouble(p -> Utils.planeFindPathToPoint(p.getPosition(), plane)[1]))
+                .collect(Collectors.toList());
+
+        for (Plane target : validTargets) {
+            double[] steerAndSteps = Utils.planeFindPathToPoint(target.getPosition(), plane);
+            double steer = clampSteer(steerAndSteps[0]);
+            int steps = (int) steerAndSteps[1];
+
+            if (validatePath(plane, steer, steps)) {
+                return steer; // Return the valid steer for kamikaze
+            }
+        }
+
         return run(plane, opponents); // Fallback if no valid targets
     }
 
@@ -228,4 +259,5 @@ public class Strategy extends BaseStrategy {
     private Double clampSteer(Double steer) {
         return Math.max(-1.0, Math.min(1.0, steer));
     }
+
 }
