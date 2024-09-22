@@ -38,15 +38,9 @@ public class Strategy extends BaseStrategy {
 
     @Override
     public Map<PlaneType, Integer> selectPlanes() {
-        if (this.team.equals("1")) {
-                return Map.of(
-                    PlaneType.STANDARD, 3,
-                    PlaneType.THUNDERBIRD, 2);
-        }
         return Map.of(
-            PlaneType.STANDARD, 3,
-            PlaneType.THUNDERBIRD, 1,
-            PlaneType.PIGEON, 20);
+                PlaneType.STANDARD, 3,
+                PlaneType.THUNDERBIRD, 2);
     }
 
     @Override
@@ -122,6 +116,7 @@ public class Strategy extends BaseStrategy {
                 .filter(p -> isInFront(plane, p))
                 .sorted(Comparator.comparingInt(Plane::getHealth)
                         .thenComparingDouble(p -> Utils.planeFindPathToPoint(((Plane) p).getPosition(), plane)[1]))
+                .filter(p -> validatePursuit(plane, p))
                 .collect(Collectors.toList());
 
         for (Plane target : validTargets) {
@@ -136,9 +131,22 @@ public class Strategy extends BaseStrategy {
 
         return run(plane, opponents);
     }
+    
 
     private boolean betterTrade(Plane plane, Plane opponent) {
         return getTradeValue(plane) <= getTradeValue(opponent);
+    }
+
+    private boolean validatePursuit(Plane plane, Plane opponent) {
+        if (opponent.getHealth() == 1) {
+            return true;
+        }
+        if (plane.getPosition().distance(opponent.getPosition()) - plane.getStats().getSpeed() - opponent.getStats().getSpeed() < 1) {
+            if (isInFront(opponent, plane)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private double getTradeValue(Plane plane) {
