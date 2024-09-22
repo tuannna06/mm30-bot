@@ -2,6 +2,7 @@ package mech.mania.starterpack.strategy;
 
 import mech.mania.starterpack.game.BaseStrategy;
 import mech.mania.starterpack.game.Plane;
+import mech.mania.starterpack.game.PlaneStats;
 import mech.mania.starterpack.game.PlaneType;
 import mech.mania.starterpack.game.Vector;
 
@@ -13,6 +14,7 @@ public class Strategy extends BaseStrategy {
     private int myCounter = 0;
     private final Random random = new Random();
     private final Map<PlaneType, BiFunction<Plane, List<Plane>, Double>> strategyMap;
+    private final Map<PlaneType, Integer> priceMap;
     private int KAMIKAZE_HEALTH = 4;
     private int RUN_DISTANCE = 20;
     private int MAX_ATTEMPT = 10;
@@ -20,9 +22,17 @@ public class Strategy extends BaseStrategy {
 
     public Strategy(String team) {
         super(team);
+
         strategyMap = new HashMap<>();
         strategyMap.put(PlaneType.STANDARD, this::standardPlaneStrategy);
         strategyMap.put(PlaneType.THUNDERBIRD, this::thunderbirdStrategy);
+
+        priceMap = new HashMap<>();
+        priceMap.put(PlaneType.FLYING_FORTRESS, 300);
+        priceMap.put(PlaneType.STANDARD, 200);
+        priceMap.put(PlaneType.THUNDERBIRD, 200);
+        priceMap.put(PlaneType.SCRAPYARD_RESCUE, 100);
+        priceMap.put(PlaneType.PIGEON, 10);
     }
 
     @Override
@@ -99,8 +109,9 @@ public class Strategy extends BaseStrategy {
     private Double pursuit(Plane plane, List<Plane> opponents) {
         List<Plane> validTargets = opponents.stream()
                 .filter(p -> isInFront(plane, p))
-                .sorted(Comparator.comparingInt(Plane::getHealth)
-                        .thenComparingDouble(p -> Utils.planeFindPathToPoint(p.getPosition(), plane)[1]))
+                .filter(p -> betterTrade(plane, p))
+                .sorted(Comparator.comparingDouble(p -> getTradeValue((Plane) p))
+                        .thenComparingDouble(p -> Utils.planeFindPathToPoint(((Plane) p).getPosition(), plane)[1]))
                 .collect(Collectors.toList());
 
         for (Plane target : validTargets) {
@@ -114,6 +125,15 @@ public class Strategy extends BaseStrategy {
         }
 
         return run(plane, opponents);
+    }
+
+    private boolean betterTrade(Plane plane, Plane opponent) {
+        return getTradeValue(plane) >= getTradeValue(opponent);
+    } 
+
+    private double getTradeValue(Plane plane) {
+        PlaneStats stats = plane.getStats();
+        return priceMap.get(plane.getType()) * ((double) plane.getHealth() / stats.getMaxHealth());
     }
 
     private boolean validatePath(Plane plane, double steer, int steps) {
