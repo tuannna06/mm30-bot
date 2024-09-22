@@ -261,4 +261,19 @@ public class Utils {
         Vector pos = plane.getPosition().add(off);
         return unavoidableCrash(pos, plane.getAngle() + (plane.getStats().getTurnSpeed() * steer), turnRadius, -50, 50, -50, 50);
     }
+
+    public static <T> T nvl(T f, T t) {
+        if (f == null) {
+            return t;
+        }
+        return f;
+    }
+
+    public static Vector normalize(Vector v) {
+        double magnitude = v.norm();
+        if (magnitude == 0) {
+            return new Vector(0, 0); // Return zero vector if the magnitude is zero
+        }
+        return v.mul((double) 1 / magnitude); 
+    }
 }
