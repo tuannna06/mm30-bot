@@ -259,7 +259,7 @@ public class Utils {
         double turnRadius = degreeToRadius(plane.getStats().getTurnSpeed(), plane.getStats().getSpeed());
         Vector off = getPathOffset(1, steer, plane.getAngle(), plane.getStats().getSpeed(), turnRadius);
         Vector pos = plane.getPosition().add(off);
-        return unavoidableCrash(pos, plane.getAngle() + (plane.getStats().getTurnSpeed() * steer), turnRadius, -50, 50, -50, 50);
+        return unavoidableCrash(pos, plane.getAngle() + (plane.getStats().getTurnSpeed() * steer), turnRadius, -48, 48, -48, 48);
     }
 
     public static <T> T nvl(T f, T t) {

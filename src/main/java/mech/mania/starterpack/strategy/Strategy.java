@@ -18,7 +18,7 @@ public class Strategy extends BaseStrategy {
     private int KAMIKAZE_HEALTH = 4;
     private int RUN_DISTANCE = 20;
     private int MAX_ATTEMPT = 10;
-    private double lb = -50, rb = 50, db = -50, ub = 50; // Example boundaries
+    private double lb = -48, rb = 48, db = -48, ub = 48; // Example boundaries
 
     public Strategy(String team) {
         super(team);
@@ -39,8 +39,8 @@ public class Strategy extends BaseStrategy {
     @Override
     public Map<PlaneType, Integer> selectPlanes() {
         return Map.of(
-                PlaneType.STANDARD, 3,
-                PlaneType.THUNDERBIRD, 2);
+            PlaneType.STANDARD, 3,
+            PlaneType.THUNDERBIRD, 2);
     }
 
     @Override
@@ -79,9 +79,11 @@ public class Strategy extends BaseStrategy {
         if (!Utils.steerCrashesPlane(1.0, plane)) {
             return 1.0;
         }
+
         if (!Utils.steerCrashesPlane(-1.0, plane)) {
             return -1.0;
         }
+
         return 0.0;
     }
 
@@ -104,7 +106,7 @@ public class Strategy extends BaseStrategy {
         }
         return clampSteer(validateSteer(plane,
                 Utils.nvl(pursuit(plane, opponents),
-                        Utils.nvl(kamikaze(plane, opponents), run(plane, opponents)))));
+                        Utils.nvl(kamikaze(plane, opponents), checkFallbackSteers(plane)))));
     }
 
     private Double validateSteer(Plane plane, Double steer) {
@@ -113,10 +115,10 @@ public class Strategy extends BaseStrategy {
 
     private Double pursuit(Plane plane, List<Plane> opponents) {
         List<Plane> validTargets = opponents.stream()
+                .filter(p -> validatePursuit(plane, opponents))
                 .filter(p -> isInFront(plane, p))
                 .sorted(Comparator.comparingInt(Plane::getHealth)
                         .thenComparingDouble(p -> Utils.planeFindPathToPoint(((Plane) p).getPosition(), plane)[1]))
-                .filter(p -> validatePursuit(plane, p))
                 .collect(Collectors.toList());
 
         for (Plane target : validTargets) {
@@ -129,7 +131,7 @@ public class Strategy extends BaseStrategy {
             }
         }
 
-        return run(plane, opponents);
+        return null;
     }
     
 
@@ -137,13 +139,14 @@ public class Strategy extends BaseStrategy {
         return getTradeValue(plane) <= getTradeValue(opponent);
     }
 
-    private boolean validatePursuit(Plane plane, Plane opponent) {
-        if (opponent.getHealth() == 1) {
-            return true;
-        }
-        if (plane.getPosition().distance(opponent.getPosition()) - plane.getStats().getSpeed() - opponent.getStats().getSpeed() < 1) {
-            if (isInFront(opponent, plane)) {
-                return false;
+    private boolean validatePursuit(Plane plane, List<Plane> opponent) {
+        for (Plane p : opponent) {
+            if (p.getHealth() == 1) {
+                continue;
+            } else if (Utils.planePathOffset(1, 0, plane).distance(Utils.planePathOffset(1, 0, p)) <= 1) {
+                if (isInFront(p, plane)) {
+                    return false;
+                }
             }
         }
         return true;
@@ -157,7 +160,7 @@ public class Strategy extends BaseStrategy {
     private boolean validatePath(Plane plane, double steer, int steps) {
         double turnRadius = Utils.degreeToRadius(plane.getStats().getTurnSpeed(), plane.getStats().getSpeed());
         Vector pos = plane.getPosition();
-        for (int i = 0; i < steps; i++) {
+        for (int i = 0; i < steps + 2; i++) {
             Vector off = Utils.getPathOffset(1, steer, plane.getAngle(), plane.getStats().getSpeed(), turnRadius);
             pos = pos.add(off);
             if (Utils.unavoidableCrash(pos, plane.getAngle() + (plane.getStats().getTurnSpeed() * steer), turnRadius,
@@ -194,7 +197,7 @@ public class Strategy extends BaseStrategy {
             }
         }
 
-        return run(plane, opponents); // Fallback if no valid targets
+        return null; // Fallback if no valid targets
     }
 
     private Double kamikazeNearest(Plane plane, List<Plane> opponents) {
@@ -207,7 +210,7 @@ public class Strategy extends BaseStrategy {
         for (Plane target : validTargets) {
             double[] steerAndSteps = Utils.planeFindPathToPoint(target.getPosition(), plane);
             double steer = clampSteer(steerAndSteps[0]);
-            int steps = (int) steerAndSteps[1];
+            int steps = (int) steerAndSteps[1] + 1;
 
             if (validatePath(plane, steer, steps)) {
                 return steer; // Return the valid steer for kamikaze
@@ -218,34 +221,15 @@ public class Strategy extends BaseStrategy {
     }
 
     private Double run(Plane plane, List<Plane> opponents) {
-        Vector planePosition = plane.getPosition();
-        Vector safeDirection = new Vector(0, 0);
-        boolean isSafe = true;
-
-        for (Plane enemy : opponents) {
-            Vector toEnemy = enemy.getPosition().sub(planePosition);
-            double distance = toEnemy.norm();
-
-            if (distance < RUN_DISTANCE) {
-                isSafe = false;
-                Vector awayFromEnemy = Utils.normalize(toEnemy.mul(-1));
-                double escapeDistance = RUN_DISTANCE - distance;
-                safeDirection = safeDirection.add(awayFromEnemy.mul(escapeDistance));
-            }
+        if (!Utils.steerCrashesPlane(1.0, plane)) {
+            return 1.0;
         }
 
-        if (isSafe) {
-            return checkFallbackSteers(plane);
+        if (!Utils.steerCrashesPlane(-1.0, plane)) {
+            return -1.0;
         }
 
-        if (safeDirection.norm() > 0) {
-            safeDirection = Utils.normalize(safeDirection);
-        }
-
-        Vector targetPosition = planePosition.add(safeDirection.mul(RUN_DISTANCE));
-        double steer = clampSteer(Utils.planeFindPathToPoint(targetPosition, plane)[0]);
-
-        return steer;
+        return 0.0;
     }
 
     private Double getRandomSteer(Plane plane) {
